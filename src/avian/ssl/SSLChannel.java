@@ -65,19 +65,8 @@ public class SSLChannel implements ReadableByteChannel, WritableByteChannel {
   }
 
   private SSLMachine.Status run(boolean wantAppRead) throws IOException {
-    System.out.println("run");
     while (isOpen()) {
-      System.out.println("before: netIn " + netIn.remaining()
-                         + " netOut " + netOut.remaining()
-                         + " appIn " + appIn.remaining()
-                         + " appOut " + appOut.remaining());
-
       SSLMachine.Status status = machine.run(netIn, appIn, appOut, netOut);
-
-      System.out.println("status " + status + " netIn " + netIn.remaining()
-                         + " netOut " + netOut.remaining()
-                         + " appIn " + appIn.remaining()
-                         + " appOut " + appOut.remaining());
 
       if (wantAppRead && appIn.hasRemaining()) {
         return SSLMachine.Status.OK;
@@ -85,9 +74,7 @@ public class SSLChannel implements ReadableByteChannel, WritableByteChannel {
 
       if (isOpen() && netOut.position() > 0) {
         netOut.flip();
-        System.out.println("write " + netOut.remaining());
-        int c = out.write(netOut);
-        System.out.println("wrote " + c);
+        out.write(netOut);
         netOut.compact();
         continue;
       }
@@ -105,12 +92,10 @@ public class SSLChannel implements ReadableByteChannel, WritableByteChannel {
 
       case WantRead: {
         if (isOpen() && netIn.hasRemaining()) {
-          System.out.println("read " + netIn.remaining());
           int c = in.read(netIn);
           if (c == -1) {
             in.close();
           }
-          System.out.println("did read " + c);
         }
       } break;
 

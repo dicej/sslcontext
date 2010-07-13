@@ -87,8 +87,6 @@ public class OpenSSLMachine implements SSLMachine {
         context.handle(status);
       }
 
-      System.out.println("close " + close + " appOut.position " + appOut.position() + " netOut.position " + netOut.position() + " context.wantWrite " + context.wantWrite);
-
       if (close
           && appOut.position() == 0
           && netOut.position() == 0
@@ -103,8 +101,6 @@ public class OpenSSLMachine implements SSLMachine {
         } finally {
           context.pop();
         }
-
-        System.out.println("close status " + status);
 
         if (status == Status.OK) {
           state = State.Closed;
