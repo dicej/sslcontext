@@ -43,11 +43,13 @@ public class HttpClient {
     }
   }
 
-  private static void sendRequest(String uri, OutputStream out) {
+  private static void sendRequest(String host, String uri, OutputStream out) {
     PrintStream ps = new PrintStream(out);
     ps.print("GET ");
     ps.print(uri);
-    ps.print(" HTTP/1.1\r\n\r\n");
+    ps.print(" HTTP/1.1\r\nHost: ");
+    ps.print(host);
+    ps.print("\r\n\r\n");
   }
 
   private static InputStream get(SSLContext sslContext, String host, int port,
@@ -63,7 +65,7 @@ public class HttpClient {
           (channel, channel, sslContext, SSLMachine.Mode.Client,
            MinBufferSize);
         try {
-          sendRequest(uri, Channels.newOutputStream(sslChannel));
+          sendRequest(host, uri, Channels.newOutputStream(sslChannel));
           InputStream result = Channels.newInputStream(sslChannel);
           sslChannel = null;
           channel = null;
@@ -72,7 +74,7 @@ public class HttpClient {
           if (sslChannel != null) sslChannel.close();
         }
       } else {
-        sendRequest(uri, Channels.newOutputStream(channel));
+        sendRequest(host, uri, Channels.newOutputStream(channel));
         InputStream result = Channels.newInputStream(channel);
         channel = null;
         return result;
