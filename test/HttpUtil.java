@@ -8,15 +8,18 @@ public class HttpUtil {
   {
     byte[] buffer = new byte[8 * 1024];
     int total = 0;
-    int c;
     while (limit < 0 || total < limit) {
       int max = buffer.length;
       if (limit >= 0 && max > (limit - total)) {
         max = limit - total;
       }
-      c = in.read(buffer, 0, max);
-      out.write(buffer, 0, c);
-      total += c;
+      int c = in.read(buffer, 0, max);
+      if (c > 0) {
+        out.write(buffer, 0, c);
+        total += c;
+      } else {
+        break;
+      }
     }
     return total;
   }
