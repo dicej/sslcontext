@@ -16,17 +16,56 @@ import java.nio.channels.Channels;
 public class HttpClient {
   private static final int MinBufferSize = 16 * 1024;
 
-  private static int pipe(InputStream in, OutputStream out)
+  private static boolean startsWithIgnoreCase(String prefix, String s) {
+    if (prefix.length() > s.length()) {
+      return false;
+    } else {
+      return prefix.equalsIgnoreCase(s.substring(0, prefix.length()));
+    }
+  }
+
+  private static void pipe(InputStream in, OutputStream out)
     throws IOException
   {
-    byte[] buffer = new byte[8 * 1024];
-    int total = 0;
-    int c;
-    while ((c = in.read(buffer)) >= 0) {
-      out.write(buffer, 0, c);
-      total += c;
+    PrintStream ps = new PrintStream(out);
+    String line;
+    int contentLength = -1;
+    boolean chunked = false;
+    while ((line = HttpUtil.readLine(in)) != null) {
+      final String cl = "content-length: ";
+      final String te = "transfer-encoding: ";
+      if (startsWithIgnoreCase(cl, line)) {
+        contentLength = Integer.parseInt(line.substring(cl.length()));
+      } else if (startsWithIgnoreCase(te, line)) {
+        String encoding = line.substring(te.length());
+        if ("chunked".equalsIgnoreCase(encoding)) {
+          chunked = true;
+        } else {
+          throw new RuntimeException("unknown transfer encoding: " + encoding);
+        }
+      }
+
+      ps.print(line);
+      ps.print("\r\n");
+
+      if (line.length() == 0) {
+        break;
+      }
     }
-    return total;
+
+    if (chunked) {
+      int size;
+      while ((size = Integer.parseInt(line = HttpUtil.readLine(in), 16)) > 0) {
+        ps.print(line);
+        ps.print("\r\n");
+        HttpUtil.pipe(in, ps, size + 2);
+      }
+      ps.print("0\r\n\r\n");
+    } else {
+      HttpUtil.pipe(in, ps, contentLength);
+    }
+
+    ps.flush();
   }
 
   private static SSLContext makeSSLContext() throws IOException {
@@ -50,6 +89,7 @@ public class HttpClient {
     ps.print(" HTTP/1.1\r\nHost: ");
     ps.print(host);
     ps.print("\r\n\r\n");
+    ps.flush();
   }
 
   private static InputStream get(SSLContext sslContext, String host, int port,

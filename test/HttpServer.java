@@ -41,19 +41,6 @@ public class HttpServer {
     }
   }
 
-  private static int pipe(InputStream in, OutputStream out)
-    throws IOException
-  {
-    byte[] buffer = new byte[8 * 1024];
-    int total = 0;
-    int c;
-    while ((c = in.read(buffer)) >= 0) {
-      out.write(buffer, 0, c);
-      total += c;
-    }
-    return total;
-  }
-
   private static void handleDirectoryRequest(File directory, String prefix,
                                              PrintStream ps)
   {
@@ -117,7 +104,7 @@ public class HttpServer {
         try {
           FileInputStream in = new FileInputStream(file);
           try {
-            pipe(in, ps);
+            HttpUtil.pipe(in, ps, -1);
           } finally {
             in.close();
           }
@@ -133,39 +120,12 @@ public class HttpServer {
     }
   }
 
-  private static String readLine(InputStream in) throws IOException {
-    StringBuilder sb = new StringBuilder();
-    boolean sawCarriageReturn = false;
-    while (true) {
-      int c = in.read();
-      switch (c) {
-      case -1:
-        throw new EOFException();
-     
-      case '\r':
-        sawCarriageReturn = true;
-        break;
-
-      case '\n':
-        if (sawCarriageReturn) {
-          return sb.toString();
-        }
-        // fall though
-
-      default:
-        sb.append((char) c);
-        sawCarriageReturn = false;
-        break;
-      }
-    }
-  }
-
   private static void handleClient(String directory, InputStream in,
                                    OutputStream out)
   {
     PrintStream ps = new PrintStream(out);
     try {
-      String line = readLine(in);
+      String line = HttpUtil.readLine(in);
       StringTokenizer st = new StringTokenizer(line);
       String verb = st.nextToken();
       if (! "get".equalsIgnoreCase(verb)) {
@@ -180,6 +140,7 @@ public class HttpServer {
                + "Connection: close\r\n\r\n");
       e.printStackTrace(ps);
     }
+    ps.flush();
   }
 
   public static void run(int port, String directory) throws Exception {
